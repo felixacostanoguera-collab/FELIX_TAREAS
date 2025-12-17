@@ -1,0 +1,94 @@
+import json
+import os
+
+DB_FILE = "database.json"
+
+# ----------------- MOTOR DE DATOS -----------------
+
+def cargar_db():
+    if os.path.exists(DB_FILE):
+        with open(DB_FILE, "r") as f:
+            return json.load(f)
+    return {}
+
+def guardar_db(db):
+    with open(DB_FILE, "w") as f:
+        json.dump(db, f, indent=4)
+
+db = cargar_db()
+
+# ----------------- COMANDOS -----------------
+
+def create_table(nombre):
+    if nombre in db:
+        print("La tabla ya existe")
+        return
+    db[nombre] = []
+    guardar_db(db)
+    print(f"Tabla '{nombre}' creada")
+
+def insert_into(tabla, datos):
+    if tabla not in db:
+        print("Tabla no existe")
+        return
+    db[tabla].append(datos)
+    guardar_db(db)
+    print("Registro insertado")
+
+def select_all(tabla):
+    if tabla not in db:
+        print("Tabla no existe")
+        return
+    print(f"\n--- TABLA {tabla.upper()} ---")
+    for fila in db[tabla]:
+        print(fila)
+
+def delete_where(tabla, campo, valor):
+    if tabla not in db:
+        print("Tabla no existe")
+        return
+    original = len(db[tabla])
+    db[tabla] = [f for f in db[tabla] if str(f.get(campo)) != valor]
+    guardar_db(db)
+    print(f"Registros eliminados: {original - len(db[tabla])}")
+
+# ----------------- PARSER -----------------
+
+def parse(comando):
+    partes = comando.split()
+
+    if partes[0] == "CREATE" and partes[1] == "TABLE":
+        create_table(partes[2])
+
+    elif partes[0] == "INSERT":
+        tabla = partes[1]
+        datos = {}
+        for p in partes[2:]:
+            k, v = p.split("=")
+            datos[k] = v
+        insert_into(tabla, datos)
+
+    elif partes[0] == "SELECT":
+        select_all(partes[1])
+
+    elif partes[0] == "DELETE":
+        tabla = partes[1]
+        campo, valor = partes[2].split("=")
+        delete_where(tabla, campo, valor)
+
+    else:
+        print("Comando no reconocido")
+
+# ----------------- CONSOLA -----------------
+
+print("🗄️ MINI DATABASE ENGINE (SQL SIMPLE)")
+print("Escriba comandos o EXIT para salir\n")
+
+while True:
+    cmd = input("DB> ").strip()
+    if cmd.upper() == "EXIT":
+        break
+    try:
+        parse(cmd)
+    except Exception as e:
+        print("Error en el comando:", e)
